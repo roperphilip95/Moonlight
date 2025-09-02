@@ -85,4 +85,35 @@ form .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   box-shadow: 0 0 30px #ff40c7, 0 0 60px #ff40c7;
 }
 
+.form-container {
+  max-width: 400px;
+  margin: 80px auto;
+  background: #1a1a1a;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px #e639af;
+  text-align: center;
+}
+.form-container h2 {
+  margin-bottom: 20px;
+  color: #fff;
+}
+.form-container input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 6px;
+  outline: none;
+}
+.form-container button {
+  width: 100%;
+  margin-top: 15px;
+}
+.msg {
+  background: #333;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
 
