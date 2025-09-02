@@ -158,6 +158,40 @@ $gallery = $conn->query("SELECT * FROM gallery ORDER BY created_at DESC LIMIT 12
 $slider = $conn->query("SELECT * FROM slider ORDER BY created_at DESC LIMIT 5");
 ?>
 
+<!-- Delete Gallery -->
+<h4>Manage Gallery</h4>
+<div style="display:flex;flex-wrap:wrap;gap:10px;">
+<?php
+$galleryAll = $conn->query("SELECT * FROM gallery ORDER BY created_at DESC");
+while ($g = $galleryAll->fetch_assoc()):
+?>
+  <div style="text-align:center;">
+    <img src="../<?= $g['image_url'] ?>" style="width:120px;height:100px;object-fit:cover;"><br>
+    <form method="post" onsubmit="return confirm('Delete this image?');">
+      <input type="hidden" name="gallery_id" value="<?= $g['id'] ?>">
+      <button class="btn" name="delete_gallery" type="submit">Delete</button>
+    </form>
+  </div>
+<?php endwhile; ?>
+</div>
+
+<!-- Delete Slider -->
+<h4>Manage Slider</h4>
+<div style="display:flex;flex-wrap:wrap;gap:10px;">
+<?php
+$sliderAll = $conn->query("SELECT * FROM slider ORDER BY created_at DESC");
+while ($s = $sliderAll->fetch_assoc()):
+?>
+  <div style="text-align:center;">
+    <img src="../<?= $s['image_url'] ?>" style="width:120px;height:100px;object-fit:cover;"><br>
+    <form method="post" onsubmit="return confirm('Delete this slide?');">
+      <input type="hidden" name="slider_id" value="<?= $s['id'] ?>">
+      <button class="btn" name="delete_slider" type="submit">Delete</button>
+    </form>
+  </div>
+<?php endwhile; ?>
+</div>
+
 <!-- Inside HTML body after Users Section -->
 <h3>Upload Gallery Image</h3>
 <form method="post" enctype="multipart/form-data">
