@@ -157,4 +157,17 @@ select {
 .order-card button {
   margin-top: 8px;
 }
-
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+}
+table th, table td {
+  padding: 8px;
+  border: 1px solid #444;
+  text-align: left;
+}
+table th {
+  background: #e639af;
+  color: #fff;
+}
