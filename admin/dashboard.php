@@ -108,3 +108,82 @@ $users = $conn->query("SELECT id, name, email, phone, role FROM users ORDER BY r
   </div>
 </body>
 </html>
+<?php
+// ... existing code (session + settings + users) ...
+
+// Handle gallery upload
+if (isset($_POST["upload_gallery"])) {
+    if (!empty($_FILES["gallery_image"]["name"])) {
+        $target_dir = "../assets/gallery/";
+        $filename = time() . "_" . basename($_FILES["gallery_image"]["name"]);
+        $target_file = $target_dir . $filename;
+
+        if (move_uploaded_file($_FILES["gallery_image"]["tmp_name"], $target_file)) {
+            $caption = $_POST["caption"];
+            $path = "assets/gallery/" . $filename;
+
+            $stmt = $conn->prepare("INSERT INTO gallery (image_url, caption) VALUES (?, ?)");
+            $stmt->bind_param("ss", $path, $caption);
+            $stmt->execute();
+            $message = "✅ Gallery image uploaded!";
+        } else {
+            $message = "❌ Failed to upload gallery image.";
+        }
+    }
+}
+
+// Handle slider upload
+if (isset($_POST["upload_slider"])) {
+    if (!empty($_FILES["slider_image"]["name"])) {
+        $target_dir = "../assets/slider/";
+        $filename = time() . "_" . basename($_FILES["slider_image"]["name"]);
+        $target_file = $target_dir . $filename;
+
+        if (move_uploaded_file($_FILES["slider_image"]["tmp_name"], $target_file)) {
+            $caption = $_POST["caption"];
+            $path = "assets/slider/" . $filename;
+
+            $stmt = $conn->prepare("INSERT INTO slider (image_url, caption) VALUES (?, ?)");
+            $stmt->bind_param("ss", $path, $caption);
+            $stmt->execute();
+            $message = "✅ Slider image uploaded!";
+        } else {
+            $message = "❌ Failed to upload slider image.";
+        }
+    }
+}
+
+// Fetch gallery & slider
+$gallery = $conn->query("SELECT * FROM gallery ORDER BY created_at DESC LIMIT 12");
+$slider = $conn->query("SELECT * FROM slider ORDER BY created_at DESC LIMIT 5");
+?>
+
+<!-- Inside HTML body after Users Section -->
+<h3>Upload Gallery Image</h3>
+<form method="post" enctype="multipart/form-data">
+  <input type="file" name="gallery_image" required>
+  <input type="text" name="caption" placeholder="Caption (optional)">
+  <button type="submit" name="upload_gallery" class="btn">Upload</button>
+</form>
+
+<h3>Upload Slider Image</h3>
+<form method="post" enctype="multipart/form-data">
+  <input type="file" name="slider_image" required>
+  <input type="text" name="caption" placeholder="Caption (optional)">
+  <button type="submit" name="upload_slider" class="btn">Upload</button>
+</form>
+
+<h3>Current Gallery</h3>
+<div style="display:flex; flex-wrap:wrap; gap:10px;">
+  <?php while ($g = $gallery->fetch_assoc()): ?>
+    <img src="../<?= $g['image_url'] ?>" alt="<?= $g['caption'] ?>" style="width:120px; height:100px; object-fit:cover;">
+  <?php endwhile; ?>
+</div>
+
+<h3>Current Slider Images</h3>
+<div style="display:flex; flex-wrap:wrap; gap:10px;">
+  <?php while ($s = $slider->fetch_assoc()): ?>
+    <img src="../<?= $s['image_url'] ?>" alt="<?= $s['caption'] ?>" style="width:120px; height:100px; object-fit:cover;">
+  <?php endwhile; ?>
+</div>
+
