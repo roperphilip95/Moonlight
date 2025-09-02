@@ -137,6 +137,20 @@ form .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   padding: 5px;
   text-align: center;
 }
+.order-card {
+  background: #222;
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
+  border-left: 5px solid #e639af;
+  color: #fff;
+}
+.order-card h3 {
+  margin-bottom: 10px;
+  color: #e639af;
+}
+
+
 
 
 
