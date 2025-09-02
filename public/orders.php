@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once "../lib/config.php";
+require_once "../lib/helpers.php";
 
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "customer") {
     header("Location: login.php");
@@ -9,14 +9,15 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "customer") {
 
 $message = "";
 
-// Sample menu (later can be stored in DB)
-$menu = [
-    ["name" => "Moët Champagne", "price" => 120.00],
-    ["name" => "Martini Cocktail", "price" => 35.00],
-    ["name" => "Whiskey Double", "price" => 50.00],
-    ["name" => "Grilled Chicken Wings", "price" => 25.00],
-    ["name" => "Beef Burger Deluxe", "price" => 40.00],
-];
+// build menu with today's prices only
+$menu = [];
+$q = $conn->query("SELECT id, name, category FROM menu_items WHERE is_active=1 ORDER BY category,name");
+while ($row = $q->fetch_assoc()) {
+  $p = price_today($row['id']);
+  if ($p !== null) { // only show items that have a price today
+    $menu[] = ['id'=>$row['id'], 'name'=>$row['name'], 'price'=>$p, 'category'=>$row['category']];
+  }
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["order"])) {
     $total = 0;
