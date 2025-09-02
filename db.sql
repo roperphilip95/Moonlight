@@ -242,3 +242,16 @@ INSERT INTO gallery (image_url, caption) VALUES
 ('assets/gallery/club1.jpg', 'VIP Lounge'),
 ('assets/gallery/club2.jpg', 'Dance Floor'),
 ('assets/gallery/club3.jpg', 'Cocktail Night');
+CREATE TABLE slider (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    image_url VARCHAR(255) NOT NULL,
+    caption VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Example demo slides
+INSERT INTO slider (image_url, caption) VALUES
+('assets/slider/slide1.jpg', 'Welcome to Moonlight'),
+('assets/slider/slide2.jpg', 'Premium Cocktails'),
+('assets/slider/slide3.jpg', 'Unforgettable Nights');
+
