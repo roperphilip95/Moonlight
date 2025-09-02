@@ -1,6 +1,5 @@
 <?php
-session_start();
-require_once "../lib/helpers.php";
+require_once "../lib/helpers.php"; // after config + session
 
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "customer") {
     header("Location: login.php");
