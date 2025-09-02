@@ -215,4 +215,30 @@ CREATE TABLE leave_requests (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+ALTER TABLE users MODIFY role ENUM('admin','manager','waiter','finance','hr','customer') NOT NULL DEFAULT 'customer';
 
+CREATE TABLE site_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE,
+    setting_value TEXT
+);
+
+-- Default values
+INSERT INTO site_settings (setting_key, setting_value) VALUES
+('site_name', 'Moonlight Club'),
+('homepage_heading', 'Welcome to Moonlight VIP Lounge'),
+('homepage_subtitle', 'Experience nightlife like never before'),
+('contact_email', 'info@moonlight.com'),
+('contact_phone', '+123456789');
+CREATE TABLE gallery (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    image_url VARCHAR(255) NOT NULL,
+    caption VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Example entries
+INSERT INTO gallery (image_url, caption) VALUES
+('assets/gallery/club1.jpg', 'VIP Lounge'),
+('assets/gallery/club2.jpg', 'Dance Floor'),
+('assets/gallery/club3.jpg', 'Cocktail Night');
