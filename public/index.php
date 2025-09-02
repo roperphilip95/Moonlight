@@ -97,18 +97,18 @@ $gallery = $conn->query("SELECT * FROM gallery ORDER BY created_at DESC LIMIT 12
   </header>
 
   <!-- Hero Slider -->
-  <section class="hero">
-    <div class="slides">
-      <img src="../assets/slider/slide1.jpg" alt="Club Night">
-      <img src="../assets/slider/slide2.jpg" alt="Cocktails">
-      <img src="../assets/slider/slide3.jpg" alt="Dance Floor">
-    </div>
-    <div class="hero-text">
-      <h1><?= $settings['homepage_heading'] ?? 'Welcome to Moonlight' ?></h1>
-      <p><?= $settings['homepage_subtitle'] ?? 'Experience nightlife like never before' ?></p>
-    </div>
-  </section>
-
+  <?php $slider = $conn->query("SELECT * FROM slider ORDER BY created_at DESC LIMIT 5"); ?>
+<section class="hero">
+  <div class="slides">
+    <?php while ($s = $slider->fetch_assoc()): ?>
+      <img src="../<?= $s['image_url'] ?>" alt="<?= $s['caption'] ?>">
+    <?php endwhile; ?>
+  </div>
+  <div class="hero-text">
+    <h1><?= $settings['homepage_heading'] ?? 'Welcome to Moonlight' ?></h1>
+    <p><?= $settings['homepage_subtitle'] ?? 'Experience nightlife like never before' ?></p>
+  </div>
+</section>
   <!-- Gallery -->
   <section id="gallery">
     <h2 style="text-align:center; margin-top:20px;">Our Gallery</h2>
