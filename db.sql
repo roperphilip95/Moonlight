@@ -185,3 +185,11 @@ CREATE TABLE order_items (
     quantity INT NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(id)
 );
+ALTER TABLE orders 
+ADD COLUMN waiter_id INT NULL,
+ADD FOREIGN KEY (waiter_id) REFERENCES users(id);
+ 
+
+
+
+
