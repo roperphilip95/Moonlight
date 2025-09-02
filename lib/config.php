@@ -15,3 +15,8 @@ try {
 } catch (Exception $e) {
   // Silently ignore in GitHub environment; real server will be configured by installer.
 }
+define('PAYSTACK_PUBLIC_KEY', 'pk_test_xxxxxxxxxxxxxxxxxxxxx');
+define('PAYSTACK_SECRET_KEY', 'sk_test_xxxxxxxxxxxxxxxxxxxxx');
+
+
+
