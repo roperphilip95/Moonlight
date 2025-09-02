@@ -17,6 +17,22 @@ while ($row = $q->fetch_assoc()) {
     $menu[] = ['id'=>$row['id'], 'name'=>$row['name'], 'price'=>$p, 'category'=>$row['category']];
   }
 }
+// Insert order as before...
+$stmt = $conn->prepare("INSERT INTO orders (user_id, total) VALUES (?, ?)");
+$stmt->bind_param("id", $_SESSION["user_id"], $total);
+$stmt->execute();
+$orderId = $stmt->insert_id;
+
+// Insert items (but store name/price captured now)
+foreach ($items as $item) {
+  $stmtItem = $conn->prepare("INSERT INTO order_items (order_id, item_name, price, quantity) VALUES (?, ?, ?, ?)");
+  $stmtItem->bind_param("isdi", $orderId, $item["name"], $item["price"], $item["qty"]);
+  $stmtItem->execute();
+}
+
+// If you want to force payment selection now, redirect to payment page:
+header("Location: pay.php?order_id=".$orderId);
+exit;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["order"])) {
     $total = 0;
