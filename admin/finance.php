@@ -1,98 +1,101 @@
 <?php
-require_once __DIR__ . '/_header.php';
-require_role(['Admin','Finance','Manager']);
+session_start();
+require_once "../lib/config.php";
 
-$pdo = db();
-
-if(isset($_POST['add_income'])){
-  $st=$pdo->prepare("INSERT INTO income(category,amount,notes,entry_date,added_by) VALUES (?,?,?,?,?)");
-  $st->execute([trim($_POST['category']), (float)$_POST['amount'], trim($_POST['notes']), $_POST['entry_date'], $_SESSION['uid']]);
-  flash("Income recorded."); header("Location: finance.php"); exit;
-}
-if(isset($_POST['add_expense'])){
-  $st=$pdo->prepare("INSERT INTO expenses(category,amount,notes,entry_date,added_by) VALUES (?,?,?,?,?)");
-  $st->execute([trim($_POST['category']), (float)$_POST['amount'], trim($_POST['notes']), $_POST['entry_date'], $_SESSION['uid']]);
-  flash("Expense recorded."); header("Location: finance.php"); exit;
+if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "finance") {
+    header("Location: ../public/login.php");
+    exit;
 }
 
-// Summary
-$from = $_GET['from'] ?? date('Y-m-01');
-$to   = $_GET['to']   ?? date('Y-m-d');
+$message = "";
 
-$sum = $pdo->prepare("
-  SELECT
-    (SELECT COALESCE(SUM(total_amount),0) FROM orders WHERE status='paid' AND DATE(created_at) BETWEEN ? AND ?) AS sales,
-    (SELECT COALESCE(SUM(amount),0) FROM income WHERE entry_date BETWEEN ? AND ?) AS other_income,
-    (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE entry_date BETWEEN ? AND ?) AS expenses
-");
-$sum->execute([$from,$to,$from,$to,$from,$to]);
-$tot = $sum->fetch();
-$net = $tot['sales'] + $tot['other_income'] - $tot['expenses'];
+// Add expense
+if (isset($_POST["add_expense"])) {
+    $desc = $_POST["description"];
+    $amount = $_POST["amount"];
+    $stmt = $conn->prepare("INSERT INTO expenses (description, amount) VALUES (?, ?)");
+    $stmt->bind_param("sd", $desc, $amount);
+    if ($stmt->execute()) {
+        $message = "✅ Expense recorded!";
+    }
+}
 
-$inc = $pdo->prepare("SELECT * FROM income WHERE entry_date BETWEEN ? AND ? ORDER BY entry_date DESC");
-$inc->execute([$from,$to]); $incomes=$inc->fetchAll();
+// Fetch completed orders (income)
+$incomeResult = $conn->query("SELECT SUM(total) AS total_income FROM orders WHERE status = 'completed'");
+$income = $incomeResult->fetch_assoc()["total_income"] ?? 0;
 
-$exp = $pdo->prepare("SELECT * FROM expenses WHERE entry_date BETWEEN ? AND ? ORDER BY entry_date DESC");
-$exp->execute([$from,$to]); $expenses=$exp->fetchAll();
+// Fetch expenses
+$expenseResult = $conn->query("SELECT SUM(amount) AS total_expenses FROM expenses");
+$expenses = $expenseResult->fetch_assoc()["total_expenses"] ?? 0;
+
+// Net profit
+$profit = $income - $expenses;
+
+// Get all expenses list
+$expenseList = $conn->query("SELECT * FROM expenses ORDER BY created_at DESC");
+
+// Get all completed orders
+$orderList = $conn->query("SELECT id, total, created_at FROM orders WHERE status = 'completed' ORDER BY created_at DESC");
 ?>
-<h2>Finance</h2>
-<div class="card">
-  <form method="get" class="row">
-    <label>From <input type="date" name="from" value="<?= htmlspecialchars($from) ?>"></label>
-    <label>To <input type="date" name="to" value="<?= htmlspecialchars($to) ?>"></label>
-    <p><button class="btn">Filter</button></p>
-  </form>
-  <p><strong>Sales:</strong> ₦<?= number_format($tot['sales'],2) ?> |
-     <strong>Other income:</strong> ₦<?= number_format($tot['other_income'],2) ?> |
-     <strong>Expenses:</strong> ₦<?= number_format($tot['expenses'],2) ?> |
-     <strong>Net:</strong> ₦<?= number_format($net,2) ?></p>
-</div>
 
-<div class="grid grid-2">
-  <div class="card">
-    <h3>Add Income</h3>
-    <form method="post">
-      <div class="row">
-        <label>Category<input name="category" required></label>
-        <label>Amount (₦)<input type="number" step="0.01" name="amount" required></label>
-      </div>
-      <label>Date<input type="date" name="entry_date" value="<?= date('Y-m-d') ?>"></label>
-      <label>Notes<textarea name="notes"></textarea></label>
-      <p><button class="btn" name="add_income">Save Income</button></p>
-    </form>
-  </div>
-  <div class="card">
-    <h3>Add Expense</h3>
-    <form method="post">
-      <div class="row">
-        <label>Category<input name="category" required></label>
-        <label>Amount (₦)<input type="number" step="0.01" name="amount" required></label>
-      </div>
-      <label>Date<input type="date" name="entry_date" value="<?= date('Y-m-d') ?>"></label>
-      <label>Notes<textarea name="notes"></textarea></label>
-      <p><button class="btn" name="add_expense">Save Expense</button></p>
-    </form>
-  </div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Finance Dashboard - Moonlight</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="logo">🌙 Moonlight Finance</div>
+    <nav class="nav">
+      <a href="finance.php" class="active">Dashboard</a>
+      <a href="../public/logout.php">Logout</a>
+    </nav>
+  </header>
 
-<div class="grid grid-2">
-  <div class="card">
-    <h3>Income (<?= htmlspecialchars($from) ?> → <?= htmlspecialchars($to) ?>)</h3>
-    <table class="table">
-      <tr><th>Date</th><th>Category</th><th>Amount</th><th>Notes</th></tr>
-      <?php foreach($incomes as $r): ?>
-        <tr><td><?= htmlspecialchars($r['entry_date']) ?></td><td><?= htmlspecialchars($r['category']) ?></td><td>₦<?= number_format($r['amount'],2) ?></td><td><?= htmlspecialchars($r['notes']) ?></td></tr>
-      <?php endforeach; ?>
+  <div class="form-container">
+    <h2>Finance Overview</h2>
+    <?php if ($message) echo "<p class='msg'>$message</p>"; ?>
+
+    <div class="order-card">
+      <h3>Summary</h3>
+      <p><strong>Total Income:</strong> $<?= number_format($income, 2) ?></p>
+      <p><strong>Total Expenses:</strong> $<?= number_format($expenses, 2) ?></p>
+      <p><strong>Net Profit:</strong> $<?= number_format($profit, 2) ?></p>
+    </div>
+
+    <h3>Record Expense</h3>
+    <form method="post">
+      <input type="text" name="description" placeholder="Expense description" required>
+      <input type="number" step="0.01" name="amount" placeholder="Amount" required>
+      <button type="submit" name="add_expense" class="btn">Add Expense</button>
+    </form>
+
+    <h3>Recent Expenses</h3>
+    <table class="order-table">
+      <tr><th>ID</th><th>Description</th><th>Amount</th><th>Date</th></tr>
+      <?php while ($exp = $expenseList->fetch_assoc()): ?>
+        <tr>
+          <td><?= $exp["id"] ?></td>
+          <td><?= $exp["description"] ?></td>
+          <td>$<?= number_format($exp["amount"], 2) ?></td>
+          <td><?= $exp["created_at"] ?></td>
+        </tr>
+      <?php endwhile; ?>
+    </table>
+
+    <h3>Completed Orders (Income)</h3>
+    <table class="order-table">
+      <tr><th>Order ID</th><th>Total</th><th>Date</th></tr>
+      <?php while ($order = $orderList->fetch_assoc()): ?>
+        <tr>
+          <td>#<?= $order["id"] ?></td>
+          <td>$<?= number_format($order["total"], 2) ?></td>
+          <td><?= $order["created_at"] ?></td>
+        </tr>
+      <?php endwhile; ?>
     </table>
   </div>
-  <div class="card">
-    <h3>Expenses (<?= htmlspecialchars($from) ?> → <?= htmlspecialchars($to) ?>)</h3>
-    <table class="table">
-      <tr><th>Date</th><th>Category</th><th>Amount</th><th>Notes</th></tr>
-      <?php foreach($expenses as $r): ?>
-        <tr><td><?= htmlspecialchars($r['entry_date']) ?></td><td><?= htmlspecialchars($r['category']) ?></td><td>₦<?= number_format($r['amount'],2) ?></td><td><?= htmlspecialchars($r['notes']) ?></td></tr>
-      <?php endforeach; ?>
-    </table>
-  </div>
-</div>
-<?php require __DIR__ . '/_footer.php'; ?>
+</body>
+</html>
