@@ -255,3 +255,66 @@ INSERT INTO slider (image_url, caption) VALUES
 ('assets/slider/slide2.jpg', 'Premium Cocktails'),
 ('assets/slider/slide3.jpg', 'Unforgettable Nights');
 
+-- Master menu & daily prices (admin can change prices any day)
+CREATE TABLE menu_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  category ENUM('drink','food','hookah','other') DEFAULT 'drink',
+  is_active TINYINT(1) DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE item_prices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  item_id INT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  effective_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_item_date (item_id, effective_date),
+  FOREIGN KEY (item_id) REFERENCES menu_items(id) ON DELETE CASCADE
+);
+
+-- Payments (online/offline)
+CREATE TABLE payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  method ENUM('cash','pos','transfer','paystack') NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  provider_ref VARCHAR(100) NULL,   -- e.g. Paystack reference or POS slip no.
+  status ENUM('pending','success','failed') DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
+-- Audit log (every sensitive action is recorded)
+CREATE TABLE audit_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
+  action VARCHAR(120) NOT NULL,
+  details TEXT,
+  ip_address VARCHAR(45) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_action_created (action, created_at)
+);
+
+-- Anti-theft: waiter shift & cash reconciliation
+CREATE TABLE shifts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  waiter_id INT NOT NULL,
+  opened_at DATETIME NOT NULL,
+  opening_float DECIMAL(10,2) DEFAULT 0.00,
+  closed_at DATETIME NULL,
+  closing_cash DECIMAL(10,2) NULL,
+  variance DECIMAL(10,2) NULL,
+  FOREIGN KEY (waiter_id) REFERENCES users(id)
+);
+
+CREATE TABLE cash_movements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  shift_id INT NOT NULL,
+  type ENUM('sale','drop','payout','correction') NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  note VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shift_id) REFERENCES shifts(id)
+);
