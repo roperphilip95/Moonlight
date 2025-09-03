@@ -9,6 +9,7 @@ $images = $pdo->query("SELECT * FROM gallery ORDER BY created_at DESC")->fetchAl
 <title>Gallery — Moonlight</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/app.js"></script>
 <style>
 .gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .gallery-item{position:relative;overflow:hidden;border-radius:10px}
@@ -28,8 +29,12 @@ $images = $pdo->query("SELECT * FROM gallery ORDER BY created_at DESC")->fetchAl
     <div class="gallery-grid">
       <?php foreach($images as $img): ?>
         <div class="gallery-item card">
-          <img src="../<?= e($img['image_url']) ?>" alt="<?= e($img['caption']) ?>">
-          <?php if ($img['caption']): ?><div class="gallery-caption"><?= e($img['caption']) ?></div><?php endif; ?>
+          <img 
+  src="../<?= e($img['image_url']) ?>" 
+  alt="<?= e($img['caption']) ?>"
+  data-lightbox="../<?= e($img['image_url']) ?>"
+  data-caption="<?= e($img['caption']) ?>">
+</div><?php endif; ?>
         </div>
       <?php endforeach; ?>
     </div>
