@@ -1,101 +1,89 @@
 <?php
 session_start();
-require_once "../lib/config.php";
+require_once __DIR__ . '/../lib/config.php';
+if(!isset($_SESSION['user_id'])) { header("Location: ../public/login.php"); exit; }
 
-if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "finance") {
-    header("Location: ../public/login.php");
-    exit;
+// Add new record
+$msg = '';
+if (isset($_POST['add_finance'])) {
+  $type = $_POST['type'];
+  $category = trim($_POST['category']);
+  $amount = $_POST['amount'];
+  $desc = trim($_POST['description']);
+  $recorder = $_SESSION['user_id'];
+
+  $st = $pdo->prepare("INSERT INTO finance (type,category,amount,description,recorded_by) VALUES (?,?,?,?,?)");
+  $st->execute([$type,$category,$amount,$desc,$recorder]);
+  $msg = "✅ Finance record added!";
 }
 
-$message = "";
+// Fetch records
+$records = $pdo->query("SELECT f.*,u.name AS staff FROM finance f LEFT JOIN users u ON u.id=f.recorded_by ORDER BY f.created_at DESC")->fetchAll();
 
-// Add expense
-if (isset($_POST["add_expense"])) {
-    $desc = $_POST["description"];
-    $amount = $_POST["amount"];
-    $stmt = $conn->prepare("INSERT INTO expenses (description, amount) VALUES (?, ?)");
-    $stmt->bind_param("sd", $desc, $amount);
-    if ($stmt->execute()) {
-        $message = "✅ Expense recorded!";
-    }
-}
-
-// Fetch completed orders (income)
-$incomeResult = $conn->query("SELECT SUM(total) AS total_income FROM orders WHERE status = 'completed'");
-$income = $incomeResult->fetch_assoc()["total_income"] ?? 0;
-
-// Fetch expenses
-$expenseResult = $conn->query("SELECT SUM(amount) AS total_expenses FROM expenses");
-$expenses = $expenseResult->fetch_assoc()["total_expenses"] ?? 0;
-
-// Net profit
-$profit = $income - $expenses;
-
-// Get all expenses list
-$expenseList = $conn->query("SELECT * FROM expenses ORDER BY created_at DESC");
-
-// Get all completed orders
-$orderList = $conn->query("SELECT id, total, created_at FROM orders WHERE status = 'completed' ORDER BY created_at DESC");
+// Totals
+$totals = $pdo->query("
+  SELECT 
+    SUM(CASE WHEN type='income' THEN amount ELSE 0 END) AS total_income,
+    SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS total_expenses,
+    SUM(CASE WHEN type='income' THEN amount ELSE -amount END) AS balance
+  FROM finance
+")->fetch();
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Finance Dashboard - Moonlight</title>
-  <link rel="stylesheet" href="../assets/style.css">
-</head>
+<!doctype html>
+<html><head>
+<meta charset="utf-8"><title>Finance Dashboard</title>
+<link rel="stylesheet" href="../assets/style.css"></head>
 <body>
-  <header class="site-header">
-    <div class="logo">🌙 Moonlight Finance</div>
-    <nav class="nav">
-      <a href="finance.php" class="active">Dashboard</a>
-      <a href="../public/logout.php">Logout</a>
-    </nav>
-  </header>
+<header class="site-header container">
+  <div class="logo">Moonlight Admin</div>
+  <nav class="nav">
+    <a href="index.php">Dashboard</a>
+    <a href="finance.php">Finance</a>
+    <a href="reservations.php">Reservations</a>
+    <a href="logout.php">Logout</a>
+  </nav>
+</header>
+<div class="container" style="padding:22px">
+  <h2>Finance Dashboard</h2>
+  <?php if($msg): ?><div class="card" style="background:#1a4220"><?= $msg ?></div><?php endif; ?>
 
-  <div class="form-container">
-    <h2>Finance Overview</h2>
-    <?php if ($message) echo "<p class='msg'>$message</p>"; ?>
-
-    <div class="order-card">
-      <h3>Summary</h3>
-      <p><strong>Total Income:</strong> $<?= number_format($income, 2) ?></p>
-      <p><strong>Total Expenses:</strong> $<?= number_format($expenses, 2) ?></p>
-      <p><strong>Net Profit:</strong> $<?= number_format($profit, 2) ?></p>
-    </div>
-
-    <h3>Record Expense</h3>
+  <div class="card">
+    <h3>Add Finance Record</h3>
     <form method="post">
-      <input type="text" name="description" placeholder="Expense description" required>
-      <input type="number" step="0.01" name="amount" placeholder="Amount" required>
-      <button type="submit" name="add_expense" class="btn">Add Expense</button>
+      <label>Type
+        <select name="type">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </label>
+      <label>Category<input type="text" name="category" required></label>
+      <label>Amount<input type="number" step="0.01" name="amount" required></label>
+      <label>Description<textarea name="description"></textarea></label>
+      <p><button class="btn" name="add_finance">Save</button></p>
     </form>
+  </div>
 
-    <h3>Recent Expenses</h3>
-    <table class="order-table">
-      <tr><th>ID</th><th>Description</th><th>Amount</th><th>Date</th></tr>
-      <?php while ($exp = $expenseList->fetch_assoc()): ?>
-        <tr>
-          <td><?= $exp["id"] ?></td>
-          <td><?= $exp["description"] ?></td>
-          <td>$<?= number_format($exp["amount"], 2) ?></td>
-          <td><?= $exp["created_at"] ?></td>
-        </tr>
-      <?php endwhile; ?>
-    </table>
+  <div class="card" style="margin-top:20px">
+    <h3>Summary</h3>
+    <p><b>Total Income:</b> $<?= number_format($totals['total_income'],2) ?></p>
+    <p><b>Total Expenses:</b> $<?= number_format($totals['total_expenses'],2) ?></p>
+    <p><b>Balance:</b> $<?= number_format($totals['balance'],2) ?></p>
+  </div>
 
-    <h3>Completed Orders (Income)</h3>
-    <table class="order-table">
-      <tr><th>Order ID</th><th>Total</th><th>Date</th></tr>
-      <?php while ($order = $orderList->fetch_assoc()): ?>
+  <div class="card" style="margin-top:20px">
+    <h3>Transactions</h3>
+    <table class="table">
+      <tr><th>Type</th><th>Category</th><th>Amount</th><th>By</th><th>Date</th></tr>
+      <?php foreach($records as $r): ?>
         <tr>
-          <td>#<?= $order["id"] ?></td>
-          <td>$<?= number_format($order["total"], 2) ?></td>
-          <td><?= $order["created_at"] ?></td>
+          <td><?= ucfirst($r['type']) ?></td>
+          <td><?= e($r['category']) ?></td>
+          <td>$<?= number_format($r['amount'],2) ?></td>
+          <td><?= e($r['staff'] ?? 'System') ?></td>
+          <td><?= $r['created_at'] ?></td>
         </tr>
-      <?php endwhile; ?>
+      <?php endforeach; ?>
     </table>
   </div>
-</body>
-</html>
+</div>
+</body></html>
