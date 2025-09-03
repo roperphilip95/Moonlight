@@ -1,33 +1,35 @@
 <?php
-include __DIR__ . '/_partials_header.php';
-
-try {
-  $pdo = new PDO("mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4", DB_USER, DB_PASS, [
-    PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC
-  ]);
-  $st = $pdo->query("SELECT title, slug, content, published_at 
-                     FROM blog_posts 
-                     WHERE published_at IS NOT NULL 
-                     ORDER BY published_at DESC LIMIT 12");
-  $posts = $st->fetchAll();
-} catch(Exception $e){ $posts = []; }
+require_once __DIR__ . '/../lib/config.php';
+$posts = $pdo->query("SELECT p.*,u.name AS author FROM blog_posts p LEFT JOIN users u ON u.id=p.author_id ORDER BY p.created_at DESC")->fetchAll();
 ?>
-<h2>Events & Blog</h2>
-<p class="muted">Updates from Moonlight — events, highlights and announcements.</p>
+<!doctype html>
+<html><head>
+<meta charset="utf-8"><title>Blog — Moonlight</title>
+<link rel="stylesheet" href="../assets/style.css"></head>
+<body>
+<header class="site-header container">
+  <div class="logo">Moonlight</div>
+  <nav class="nav">
+    <a href="index.php">Home</a>
+    <a href="menu.php">Menu</a>
+    <a href="blog.php">Blog</a>
+    <a href="contact.php">Contact</a>
+    <a href="login.php">Login</a>
+  </nav>
+</header>
 
-<div class="grid grid-3">
-  <?php if(!$posts): ?>
-    <div class="card">
-      <h3>No posts yet</h3>
-      <p class="muted">Use Admin → Blog to publish your first post.</p>
+<div class="container" style="padding:22px">
+  <h2>Moonlight Blog & Events</h2>
+  <?php foreach($posts as $p): ?>
+    <div class="card" style="margin-bottom:20px">
+      <?php if($p['image_url']): ?>
+        <img src="../<?= $p['image_url'] ?>" style="width:100%;max-height:200px;object-fit:cover">
+      <?php endif; ?>
+      <h3><?= e($p['title']) ?></h3>
+      <p class="muted">By <?= e($p['author'] ?? 'Admin') ?> on <?= $p['created_at'] ?></p>
+      <p><?= nl2br(e(substr($p['content'],0,200))) ?>...</p>
+      <a href="post.php?id=<?= $p['id'] ?>" class="btn">Read More</a>
     </div>
-  <?php else: foreach($posts as $p): ?>
-    <div class="card">
-      <h3><?= htmlspecialchars($p['title']) ?></h3>
-      <p class="muted"><?= date('M j, Y', strtotime($p['published_at'])) ?></p>
-      <p><?= nl2br(htmlspecialchars(mb_strimwidth(strip_tags($p['content']),0,160,'…'))) ?></p>
-    </div>
-  <?php endforeach; endif; ?>
+  <?php endforeach; ?>
 </div>
-<?php include __DIR__ . '/_partials_footer.php'; ?>
+</body></html>
