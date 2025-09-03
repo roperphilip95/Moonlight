@@ -123,3 +123,44 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 INSERT IGNORE INTO roles (id,name) VALUES (1,'admin'),(2,'manager'),(3,'waiter'),(4,'finance'),(5,'hr'),(6,'customer');
 
 SET FOREIGN_KEY_CHECKS=1;
+
+
+CREATE TABLE menu_categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE menu_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    image_url VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE SET NULL
+);
+
+-- Demo categories
+INSERT INTO menu_categories (name) VALUES ('Drinks'), ('Cocktails'), ('Food');
+
+-- Demo items
+INSERT INTO menu_items (category_id, name, description, price) VALUES
+(1, 'Whiskey', 'Premium Scotch Whiskey', 25.00),
+(2, 'Mojito', 'Classic Cuban cocktail', 15.00),
+(3, 'Grilled Chicken', 'Served with spicy sauce', 18.50);
+
+
+CREATE TABLE blog_posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    image_url VARCHAR(255) DEFAULT NULL,
+    author_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Demo post
+INSERT INTO blog_posts (title, content) 
+VALUES ('Grand Opening Night', 'Join us for Moonlight’s grand opening this Friday with free cocktails for the first 50 guests!');
