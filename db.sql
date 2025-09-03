@@ -199,3 +199,25 @@ VALUES
 ('income','Ticket Sales', 500.00, 'Entry tickets Friday night'),
 ('expense','Drinks Purchase', 200.00, 'Supplier payment');
 
+
+-- Attendance table
+CREATE TABLE attendance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    staff_id INT NOT NULL,
+    check_in DATETIME NOT NULL,
+    check_out DATETIME DEFAULT NULL,
+    FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Leave requests table
+CREATE TABLE leave_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    staff_id INT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason TEXT,
+    status ENUM('pending','approved','rejected') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
