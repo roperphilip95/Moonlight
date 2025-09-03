@@ -1,120 +1,83 @@
 <?php
 session_start();
-require_once "../lib/config.php";
+require_once __DIR__ . '/../lib/config.php';
+if(!isset($_SESSION['user_id'])) { header("Location: ../public/login.php"); exit; }
 
-if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "hr") {
-    header("Location: ../public/login.php");
-    exit;
+$msg = '';
+
+// Approve/reject leave
+if (isset($_GET['approve'])) {
+  $pdo->prepare("UPDATE leave_requests SET status='approved' WHERE id=?")->execute([$_GET['approve']]);
+  $msg = "✅ Leave approved";
+}
+if (isset($_GET['reject'])) {
+  $pdo->prepare("UPDATE leave_requests SET status='rejected' WHERE id=?")->execute([$_GET['reject']]);
+  $msg = "❌ Leave rejected";
 }
 
-$message = "";
+$requests = $pdo->query("
+  SELECT l.*, u.name 
+  FROM leave_requests l 
+  JOIN users u ON u.id=l.staff_id 
+  ORDER BY l.created_at DESC
+")->fetchAll();
 
-// Mark attendance
-if (isset($_POST["mark_attendance"])) {
-    $userId = $_POST["user_id"];
-    $status = $_POST["status"];
-    $today = date("Y-m-d");
-
-    $stmt = $conn->prepare("INSERT INTO attendance (user_id, date, status) VALUES (?, ?, ?)");
-    $stmt->bind_param("iss", $userId, $today, $status);
-    if ($stmt->execute()) {
-        $message = "✅ Attendance marked for user!";
-    }
-}
-
-// Approve/Decline Leave
-if (isset($_POST["update_leave"])) {
-    $leaveId = $_POST["leave_id"];
-    $status = $_POST["status"];
-    $stmt = $conn->prepare("UPDATE leave_requests SET status = ? WHERE id = ?");
-    $stmt->bind_param("si", $status, $leaveId);
-    if ($stmt->execute()) {
-        $message = "✅ Leave request updated!";
-    }
-}
-
-// Fetch staff
-$staff = $conn->query("SELECT id, name, role FROM users WHERE role IN ('manager','waiter','finance')");
-
-// Fetch leave requests
-$leaves = $conn->query("SELECT l.*, u.name FROM leave_requests l JOIN users u ON l.user_id = u.id ORDER BY l.created_at DESC");
-
-// Fetch attendance records
-$attendance = $conn->query("SELECT a.*, u.name FROM attendance a JOIN users u ON a.user_id = u.id ORDER BY a.date DESC");
+$attendance = $pdo->query("
+  SELECT a.*, u.name 
+  FROM attendance a 
+  JOIN users u ON u.id=a.staff_id 
+  ORDER BY a.check_in DESC
+")->fetchAll();
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>HR Dashboard - Moonlight</title>
-  <link rel="stylesheet" href="../assets/style.css">
-</head>
+<!doctype html>
+<html><head>
+<meta charset="utf-8"><title>HR Dashboard</title>
+<link rel="stylesheet" href="../assets/style.css"></head>
 <body>
-  <header class="site-header">
-    <div class="logo">🌙 Moonlight HR</div>
-    <nav class="nav">
-      <a href="hr.php" class="active">Dashboard</a>
-      <a href="../public/logout.php">Logout</a>
-    </nav>
-  </header>
+<header class="site-header container">
+  <div class="logo">Moonlight HR</div>
+  <nav class="nav">
+    <a href="index.php">Dashboard</a>
+    <a href="hr.php">HR</a>
+    <a href="logout.php">Logout</a>
+  </nav>
+</header>
+<div class="container" style="padding:22px">
+  <h2>HR Dashboard</h2>
+  <?php if($msg): ?><div class="card" style="background:#1a4220"><?= $msg ?></div><?php endif; ?>
 
-  <div class="form-container">
-    <h2>HR Management</h2>
-    <?php if ($message) echo "<p class='msg'>$message</p>"; ?>
-
-    <h3>Mark Attendance</h3>
-    <form method="post">
-      <select name="user_id" required>
-        <option value="">-- Select Staff --</option>
-        <?php while ($s = $staff->fetch_assoc()): ?>
-          <option value="<?= $s["id"] ?>"><?= $s["name"] ?> (<?= $s["role"] ?>)</option>
-        <?php endwhile; ?>
-      </select>
-      <select name="status" required>
-        <option value="present">Present</option>
-        <option value="absent">Absent</option>
-        <option value="late">Late</option>
-      </select>
-      <button type="submit" name="mark_attendance" class="btn">Mark</button>
-    </form>
-
-    <h3>Attendance Records</h3>
-    <table class="order-table">
-      <tr><th>Name</th><th>Date</th><th>Status</th></tr>
-      <?php while ($a = $attendance->fetch_assoc()): ?>
-        <tr>
-          <td><?= $a["name"] ?></td>
-          <td><?= $a["date"] ?></td>
-          <td><?= ucfirst($a["status"]) ?></td>
-        </tr>
-      <?php endwhile; ?>
-    </table>
-
+  <div class="card">
     <h3>Leave Requests</h3>
-    <table class="order-table">
-      <tr><th>Name</th><th>Dates</th><th>Reason</th><th>Status</th><th>Action</th></tr>
-      <?php while ($l = $leaves->fetch_assoc()): ?>
+    <table class="table">
+      <tr><th>Staff</th><th>From</th><th>To</th><th>Reason</th><th>Status</th><th>Action</th></tr>
+      <?php foreach($requests as $r): ?>
         <tr>
-          <td><?= $l["name"] ?></td>
-          <td><?= $l["start_date"] ?> → <?= $l["end_date"] ?></td>
-          <td><?= $l["reason"] ?></td>
-          <td><?= ucfirst($l["status"]) ?></td>
+          <td><?= e($r['name']) ?></td>
+          <td><?= $r['start_date'] ?></td>
+          <td><?= $r['end_date'] ?></td>
+          <td><?= e($r['reason']) ?></td>
+          <td><?= ucfirst($r['status']) ?></td>
           <td>
-            <?php if ($l["status"] == "pending"): ?>
-              <form method="post" style="display:inline;">
-                <input type="hidden" name="leave_id" value="<?= $l["id"] ?>">
-                <select name="status" required>
-                  <option value="approved">Approve</option>
-                  <option value="declined">Decline</option>
-                </select>
-                <button type="submit" name="update_leave" class="btn">Update</button>
-              </form>
-            <?php endif; ?>
+            <a href="?approve=<?= $r['id'] ?>" class="btn">Approve</a>
+            <a href="?reject=<?= $r['id'] ?>" class="btn">Reject</a>
           </td>
         </tr>
-      <?php endwhile; ?>
+      <?php endforeach; ?>
     </table>
   </div>
-</body>
-</html>
+
+  <div class="card" style="margin-top:20px">
+    <h3>Attendance Logs</h3>
+    <table class="table">
+      <tr><th>Staff</th><th>Check In</th><th>Check Out</th></tr>
+      <?php foreach($attendance as $a): ?>
+        <tr>
+          <td><?= e($a['name']) ?></td>
+          <td><?= $a['check_in'] ?></td>
+          <td><?= $a['check_out'] ?? '-' ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </table>
+  </div>
+</div>
+</body></html>
