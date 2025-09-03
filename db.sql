@@ -164,3 +164,20 @@ CREATE TABLE blog_posts (
 -- Demo post
 INSERT INTO blog_posts (title, content) 
 VALUES ('Grand Opening Night', 'Join us for Moonlight’s grand opening this Friday with free cocktails for the first 50 guests!');
+
+
+CREATE TABLE reservations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NULL,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    guests INT NOT NULL,
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    message TEXT,
+    status ENUM('pending','confirmed','cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
