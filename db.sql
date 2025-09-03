@@ -1,5 +1,6 @@
--- Charset & engine: ensure InnoDB + utf8mb4 on server
--- Core auth
+-- Core schema for Moonlight PRO (minimal starter)
+SET FOREIGN_KEY_CHECKS=0;
+
 CREATE TABLE IF NOT EXISTS roles (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(50) UNIQUE NOT NULL
@@ -8,134 +9,57 @@ CREATE TABLE IF NOT EXISTS roles (
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120),
-  email VARCHAR(120) UNIQUE,
+  email VARCHAR(150) UNIQUE,
+  phone VARCHAR(30),
   password_hash VARCHAR(255) NOT NULL,
-  role_id INT NOT NULL,
+  role_id INT NOT NULL DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (role_id) REFERENCES roles(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Staff & HR
-CREATE TABLE IF NOT EXISTS staff (
+CREATE TABLE IF NOT EXISTS site_settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT,
-  name VARCHAR(120),
-  contact_info VARCHAR(255),
-  salary DECIMAL(10,2) DEFAULT 0,
-  hire_date DATE,
-  FOREIGN KEY (user_id) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS attendance (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  clock_in DATETIME,
-  clock_out DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS leaves (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  type ENUM('Sick','Casual','Vacation') NOT NULL,
-  from_date DATE NOT NULL,
-  to_date DATE NOT NULL,
-  reason VARCHAR(255),
-  status ENUM('pending','approved','declined') DEFAULT 'pending',
-  approved_by INT NULL,
-  approved_at DATETIME NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (approved_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Menu & pricing (daily locked prices)
-CREATE TABLE IF NOT EXISTS menu_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(160) NOT NULL,
-  category VARCHAR(100),
-  base_price DECIMAL(10,2) NOT NULL DEFAULT 0,
-  active TINYINT(1) DEFAULT 1,
+  setting_key VARCHAR(100) UNIQUE NOT NULL,
+  setting_value TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS daily_prices (
+CREATE TABLE IF NOT EXISTS menu_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(160) NOT NULL,
+  category VARCHAR(80) DEFAULT 'drink',
+  is_active TINYINT(1) DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS item_prices (
   id INT AUTO_INCREMENT PRIMARY KEY,
   item_id INT NOT NULL,
-  price_date DATE NOT NULL,
   price DECIMAL(10,2) NOT NULL,
-  UNIQUE KEY uniq_item_date (item_id, price_date),
-  FOREIGN KEY (item_id) REFERENCES menu_items(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Orders & POS
-CREATE TABLE IF NOT EXISTS orders (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  order_no VARCHAR(40) UNIQUE,
-  user_id INT,
-  payment_method ENUM('cash','transfer','card','paystack') NOT NULL,
-  status ENUM('pending_cash','paid','cancelled') DEFAULT 'pending_cash',
-  total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  effective_date DATE NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  UNIQUE KEY uniq_item_date (item_id,effective_date),
+  FOREIGN KEY (item_id) REFERENCES menu_items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS order_items (
+CREATE TABLE IF NOT EXISTS slider (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  order_id INT NOT NULL,
-  item_id INT NOT NULL,
-  qty INT NOT NULL,
-  unit_price DECIMAL(10,2) NOT NULL,
-  line_total DECIMAL(10,2) NOT NULL,
-  FOREIGN KEY (order_id) REFERENCES orders(id),
-  FOREIGN KEY (item_id) REFERENCES menu_items(id)
+  image_url VARCHAR(255) NOT NULL,
+  caption VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Finance
-CREATE TABLE IF NOT EXISTS finance_records (
+CREATE TABLE IF NOT EXISTS gallery (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  type ENUM('sale_online','sale_cash','sale_transfer') NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  ref_order_id INT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS income (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  category VARCHAR(100) NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  notes VARCHAR(255),
-  entry_date DATE NOT NULL,
-  added_by INT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (added_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS expenses (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  category VARCHAR(100) NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  notes VARCHAR(255),
-  entry_date DATE NOT NULL,
-  added_by INT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (added_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- CMS / Streams
-CREATE TABLE IF NOT EXISTS live_streams (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  platform ENUM('youtube','facebook','instagram') NOT NULL,
-  url VARCHAR(255) NOT NULL,
-  is_active TINYINT(1) DEFAULT 0,
+  image_url VARCHAR(255) NOT NULL,
+  caption VARCHAR(255),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS blog_posts (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(160),
-  slug VARCHAR(180) UNIQUE,
+  title VARCHAR(200),
+  slug VARCHAR(240) UNIQUE,
   content MEDIUMTEXT,
   author_id INT,
   published_at DATETIME NULL,
@@ -143,178 +67,59 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   FOREIGN KEY (author_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS customizations (
+CREATE TABLE IF NOT EXISTS reservations (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  slug VARCHAR(100) UNIQUE,
-  value TEXT
+  customer_name VARCHAR(150) NOT NULL,
+  customer_email VARCHAR(150),
+  customer_phone VARCHAR(30) NOT NULL,
+  party_size INT NOT NULL DEFAULT 1,
+  reserve_date DATE NOT NULL,
+  reserve_time TIME NOT NULL,
+  note TEXT,
+  status ENUM('pending','confirmed','cancelled') DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Audit logs (anti-theft)
-CREATE TABLE IF NOT EXISTS audit_logs (
+CREATE TABLE IF NOT EXISTS orders (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT,
-  action VARCHAR(255),
-  details TEXT,
+  user_id INT NULL,
+  total DECIMAL(10,2) NOT NULL DEFAULT 0,
+  status ENUM('pending','processing','completed','cancelled') DEFAULT 'pending',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
-    phone VARCHAR(20) NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('admin','manager','waiter','finance','hr','customer') DEFAULT 'customer',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE orders (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    total DECIMAL(10,2) NOT NULL,
-    status ENUM('pending','processing','completed','cancelled') DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-CREATE TABLE order_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    item_name VARCHAR(255) NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    quantity INT NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id)
-);
-ALTER TABLE orders 
-ADD COLUMN waiter_id INT NULL,
-ADD FOREIGN KEY (waiter_id) REFERENCES users(id);
-
-CREATE TABLE expenses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    description VARCHAR(255) NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE attendance (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    date DATE NOT NULL,
-    status ENUM('present','absent','late') DEFAULT 'present',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE TABLE leave_requests (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status ENUM('pending','approved','declined') DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-ALTER TABLE users MODIFY role ENUM('admin','manager','waiter','finance','hr','customer') NOT NULL DEFAULT 'customer';
-
-CREATE TABLE site_settings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    setting_key VARCHAR(100) UNIQUE,
-    setting_value TEXT
-);
-
--- Default values
-INSERT INTO site_settings (setting_key, setting_value) VALUES
-('site_name', 'Moonlight Club'),
-('homepage_heading', 'Welcome to Moonlight VIP Lounge'),
-('homepage_subtitle', 'Experience nightlife like never before'),
-('contact_email', 'info@moonlight.com'),
-('contact_phone', '+123456789');
-CREATE TABLE gallery (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    image_url VARCHAR(255) NOT NULL,
-    caption VARCHAR(255) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Example entries
-INSERT INTO gallery (image_url, caption) VALUES
-('assets/gallery/club1.jpg', 'VIP Lounge'),
-('assets/gallery/club2.jpg', 'Dance Floor'),
-('assets/gallery/club3.jpg', 'Cocktail Night');
-CREATE TABLE slider (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    image_url VARCHAR(255) NOT NULL,
-    caption VARCHAR(255) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Example demo slides
-INSERT INTO slider (image_url, caption) VALUES
-('assets/slider/slide1.jpg', 'Welcome to Moonlight'),
-('assets/slider/slide2.jpg', 'Premium Cocktails'),
-('assets/slider/slide3.jpg', 'Unforgettable Nights');
-
--- Master menu & daily prices (admin can change prices any day)
-CREATE TABLE menu_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(150) NOT NULL,
-  category ENUM('drink','food','hookah','other') DEFAULT 'drink',
-  is_active TINYINT(1) DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE item_prices (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  item_id INT NOT NULL,
-  price DECIMAL(10,2) NOT NULL,
-  effective_date DATE NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_item_date (item_id, effective_date),
-  FOREIGN KEY (item_id) REFERENCES menu_items(id) ON DELETE CASCADE
-);
-
--- Payments (online/offline)
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
-  method ENUM('cash','pos','transfer','paystack') NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  provider_ref VARCHAR(100) NULL,   -- e.g. Paystack reference or POS slip no.
-  status ENUM('pending','success','failed') DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  item_id INT NULL,
+  item_name VARCHAR(255) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  quantity INT NOT NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Audit log (every sensitive action is recorded)
-CREATE TABLE audit_logs (
+CREATE TABLE IF NOT EXISTS payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  method ENUM('cash','transfer','card','paystack') NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  provider_ref VARCHAR(100),
+  status ENUM('pending','success','failed') DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS audit_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NULL,
-  action VARCHAR(120) NOT NULL,
+  action VARCHAR(255) NOT NULL,
   details TEXT,
-  ip_address VARCHAR(45) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_action_created (action, created_at)
-);
+  ip_address VARCHAR(45),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Anti-theft: waiter shift & cash reconciliation
-CREATE TABLE shifts (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  waiter_id INT NOT NULL,
-  opened_at DATETIME NOT NULL,
-  opening_float DECIMAL(10,2) DEFAULT 0.00,
-  closed_at DATETIME NULL,
-  closing_cash DECIMAL(10,2) NULL,
-  variance DECIMAL(10,2) NULL,
-  FOREIGN KEY (waiter_id) REFERENCES users(id)
-);
+-- Seed default roles
+INSERT IGNORE INTO roles (id,name) VALUES (1,'admin'),(2,'manager'),(3,'waiter'),(4,'finance'),(5,'hr'),(6,'customer');
 
-CREATE TABLE cash_movements (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  shift_id INT NOT NULL,
-  type ENUM('sale','drop','payout','correction') NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  note VARCHAR(255) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (shift_id) REFERENCES shifts(id)
-);
+SET FOREIGN_KEY_CHECKS=1;
