@@ -181,3 +181,21 @@ CREATE TABLE reservations (
     FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+
+CREATE TABLE finance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    type ENUM('income','expense') NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    description TEXT,
+    recorded_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Example entries
+INSERT INTO finance (type, category, amount, description) 
+VALUES 
+('income','Ticket Sales', 500.00, 'Entry tickets Friday night'),
+('expense','Drinks Purchase', 200.00, 'Supplier payment');
+
